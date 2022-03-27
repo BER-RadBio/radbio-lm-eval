@@ -40,52 +40,38 @@ def wikitext_detokenizer(string):
     return string
 
 
-class RadBioText(PerplexityTask):
-    VERSION = 1
+class WikiText(PerplexityTask):
+    VERSION = 0
 
     def download(self):
-        if not os.path.exists('data/radbio/test'):
-            os.makedirs("data/radbio/test", exist_ok=True)
-            with open("data/radbio/test/test.validation.raw", 'w') as f:
-                txt = """So let me explain, I modified the lowercase_word function. Let’s look at the changes.\n
-Our function now accepts a parameter called number, As you can see, it is already initialized with a value, 5. The reason is that, if you choose not to provide a number, it uses the default value in the parameter.\n
-In calling the function, it will be like this word = lowercase_word(number) with your desired number being in the brackets.\n
-The length of the generated word will be equal to the length of the number you provided. The rest of the code is pretty self-explanatory."""
-                for i in range(10):
-                    f.write(txt)
-                    f.write('\n')
-            with open("data/radbio/test/test.test.raw", 'w') as f:
-                txt = """So let me explain, I modified the lowercase_word function. Let\
-’s look at the changes.
-Our function now accepts a parameter called number, As you can see, it is already initi\\n
-alized with a value, 5. The reason is that, if you choose not to provide a number, it u\
-ses the default value in the parameter.
-In calling the function, it will be like this word = lowercase_word(number) with your d\\n
-esired number being in the brackets.
-The length of the generated word will be equal to the length of the number you provided\
-. The rest of the code is pretty self-explanatory."""
-                for i in range(10):
-                    f.write(txt)
-                    f.write('\n')
+        if not os.path.exists('data/wikitext/wikitext-2-raw/wiki.valid.raw'):
+            os.makedirs("data/wikitext/", exist_ok=True)
+            download_file("https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-raw-v1.zip", "data/wikitext/wikitext-2-raw-v1.zip", "ef7edb566e3e2b2d31b29c1fdb0c89a4cc683597484c3dc2517919c615435a11")
+            sh("cd data/wikitext/ && unzip wikitext-2-raw-v1.zip")
 
-                
-            
+    def fewshot_description(self):
+        # TODO: figure out fewshot description
+        return ""
 
     def has_validation_docs(self):
         return True
 
     def has_train_docs(self):
-        return False
+        return True
 
     def has_test_docs(self):
         return True
     
     def docs_for_split(self, split):
         ret = []
-        for line in open(f"/raid/stevens/lm-evaluation-harness/radbiotexthack.txt").read().split('\n'):
-            rline = line.strip()
-            if len(line) > 30:
-                yield line
+        for line in open(f"data/wikitext/wikitext-2-raw/wiki.{split}.raw").read().split('\n'):
+            rline = line.replace("= = =", "===").replace("= =", "==").strip()
+            if rline.startswith('= ') and rline.strip().endswith(' ='):
+                s = '\n'.join(ret)
+                if s.strip(): yield s
+                ret = []
+            ret.append(line)
+        yield '\n'.join(ret)
 
     def validation_docs(self):
         return self.docs_for_split('valid')
